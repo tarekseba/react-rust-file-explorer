@@ -19,25 +19,18 @@ struct NotTest {
 }
 
 #[tauri::command]
-async fn hello_world(message: String) -> Vec<Directory> {
+async fn readdir_handler(path: String) -> Vec<Directory> {
     let now = Instant::now();
-    println!("before");
     let mut all_entries: Vec<Directory> = vec![];
-    readdir("/home/wtman/.config", &mut all_entries);
+    readdir(&path, &mut all_entries);
     println!("after {:?}", now.elapsed());
     all_entries
-    // vec![Directory {
-    //     file_type: FileType::Symlink(Some("LOL".to_owned())),
-    //     name: "tarek".to_owned(),
-    //     path: "tarek".to_owned(),
-    //     error: None,
-    // }]
 }
 
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![hello_world])
+        .invoke_handler(tauri::generate_handler![readdir_handler])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
