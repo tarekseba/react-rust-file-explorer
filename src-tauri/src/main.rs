@@ -6,8 +6,7 @@ use std::{
     fs::{self, ReadDir},
     io::ErrorKind,
     path::PathBuf,
-    thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use serde::Serialize;
@@ -22,7 +21,7 @@ struct NotTest {
 async fn readdir_handler(path: String) -> Vec<Directory> {
     let now = Instant::now();
     let mut all_entries: Vec<Directory> = vec![];
-    readdir(&path, &mut all_entries);
+    let _ = readdir(&path, &mut all_entries);
     println!("after {:?}", now.elapsed());
     all_entries
 }
@@ -36,6 +35,7 @@ async fn main() {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(tag = "type", content = "target")]
 enum FileType {
     Directory,
     File,
@@ -78,11 +78,7 @@ impl From<&PathBuf> for FileType {
             value.is_symlink(),
             value.is_file()
         );
-        if value.is_dir() {
-            FileType::Directory
-        } else if value.metadata().unwrap().is_file() {
-            FileType::File
-        } else if value.metadata().unwrap().is_symlink() {
+        if value.is_symlink() {
             let file_name = value.file_name();
             if let Some(f_name) = file_name {
                 match fs::read_link(f_name) {
@@ -92,6 +88,10 @@ impl From<&PathBuf> for FileType {
             } else {
                 FileType::Symlink(None)
             }
+        } else if value.is_dir() {
+            FileType::Directory
+        } else if value.metadata().unwrap().is_file() {
+            FileType::File
         } else {
             FileType::Unknown
         }
