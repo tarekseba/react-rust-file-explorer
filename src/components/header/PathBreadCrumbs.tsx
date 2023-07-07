@@ -1,14 +1,17 @@
 import React from "react"
 import { PathBreadCrumb } from "./PathBreadCrumb"
 interface Props {
-  crumbs: string[]
+  path: string
 }
 
-export const PathBreadCrumbs = ({ crumbs }: Props) => {
+export const PathBreadCrumbs = ({ path }: Props) => {
+  const crumbs: string[] = path.split("/")
+  const entries = crumbs.slice().filter((entry: string) => entry.length > 0)
   return (
     <nav>
-      <ul className="flex flex-row gap-2">
-        {crumbs?.map((crumb: string, index: number) => <PathBreadCrumb path={crumb} chevron={index !== 0} key={`${crumb}_${index}`}/>)}
+      <ul className="flex flex-row gap-2 h-6">
+        <PathBreadCrumb isRoot />
+        {entries?.map((crumb: string, index: number) => <PathBreadCrumb path={crumb} chevron key={`${crumb}_${index}`} />)}
       </ul>
     </nav>
   )
