@@ -1,7 +1,10 @@
 import React, { type Context, createContext, useContext, type PropsWithChildren, useState, type Dispatch, type SetStateAction } from "react"
-import type { DirEntry, ReactState } from "../domain"
+import type { DirEntry, FileTypeEntity, ReactState } from "../domain"
 import { HistoryBuffer } from "../domain/history_buffer"
+import { open } from "@tauri-apps/api/shell"
 import { invoke } from "@tauri-apps/api"
+
+type OpenActions = { [k in FileTypeEntity]: (path: DirEntry) => Promise<void> }
 
 export interface AppState {
   directory?: DirEntry[]
@@ -11,6 +14,7 @@ export interface AppState {
   reloadDir: () => void
   prevDir: () => void
   nextDir: () => void
+  openActions: OpenActions
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -43,6 +47,30 @@ export const AppStateProvider = (props: PropsWithChildren<unknown>) => {
     await reloadDir()
   }
 
+  const openActions: OpenActions = {
+    File: async (entry: DirEntry) => {
+      try {
+        await open(entry.path)
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    Symlink: async (_entry: DirEntry) => {
+      try {
+        await Promise.resolve(null)
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    Directory: async (entry: DirEntry) => {
+      try {
+        await changeDir(entry.path)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }
+
   const initialState: AppState = {
     directory,
     setDirectory,
@@ -50,7 +78,8 @@ export const AppStateProvider = (props: PropsWithChildren<unknown>) => {
     changeDir,
     reloadDir,
     prevDir,
-    nextDir
+    nextDir,
+    openActions
   }
 
   return (
