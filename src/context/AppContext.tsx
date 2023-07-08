@@ -55,9 +55,12 @@ export const AppStateProvider = (props: PropsWithChildren<unknown>) => {
         console.error(e)
       }
     },
-    Symlink: async (_entry: DirEntry) => {
+    Symlink: async (entry: DirEntry) => {
       try {
-        await Promise.resolve(null)
+        const file: DirEntry = await invoke("readlink_handler", { path: entry.path })
+        if (file) {
+          await changeDir(file.path)
+        }
       } catch (e) {
         console.error(e)
       }

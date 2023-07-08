@@ -26,10 +26,24 @@ async fn readdir_handler(path: String) -> Vec<Directory> {
     all_entries
 }
 
+#[tauri::command]
+async fn readlink_handler(path: String) -> Option<Directory> {
+    let path = PathBuf::from(path);
+    if let Ok(path_buf) = fs::read_link(path) {
+        return Some(Directory {
+            file_type: FileType::from(&path_buf),
+            name: path_buf.file_name().unwrap().to_string_lossy().to_string(),
+            path: path_buf.to_string_lossy().to_string().to_owned(),
+            error: None,
+        });
+    }
+    None
+}
+
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![readdir_handler])
+        .invoke_handler(tauri::generate_handler![readdir_handler, readlink_handler])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -73,11 +87,13 @@ impl From<&PathBuf> for Directory {
 impl From<&PathBuf> for FileType {
     fn from(value: &PathBuf) -> Self {
         println!(
-            "file: {:?} | is symlink : {} | is file : {}",
+            "file: {:?} | is symlink : {} | is file : {}, is dir : {}",
             value.file_name(),
             value.is_symlink(),
-            value.is_file()
+            value.is_file(),
+            value.is_dir()
         );
+        println!("{:?}", fs::metadata(value));
         if value.is_symlink() {
             let file_name = value.file_name();
             if let Some(f_name) = file_name {
@@ -90,7 +106,7 @@ impl From<&PathBuf> for FileType {
             }
         } else if value.is_dir() {
             FileType::Directory
-        } else if value.metadata().unwrap().is_file() {
+        } else if value.is_file() {
             FileType::File
         } else {
             FileType::Unknown
