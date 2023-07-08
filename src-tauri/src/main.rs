@@ -6,39 +6,15 @@ use std::{
     fs::{self, ReadDir},
     io::ErrorKind,
     path::PathBuf,
-    time::Instant,
 };
 
 use serde::Serialize;
 
-#[derive(Default, Serialize)]
-struct NotTest {
-    name: String,
-    age: u8,
-}
+use crate::handlers::explorer_handlers::{readlink_handler, readdir_handler};
 
-#[tauri::command]
-async fn readdir_handler(path: String) -> Vec<Directory> {
-    let now = Instant::now();
-    let mut all_entries: Vec<Directory> = vec![];
-    let _ = readdir(&path, &mut all_entries);
-    println!("after {:?}", now.elapsed());
-    all_entries
-}
-
-#[tauri::command]
-async fn readlink_handler(path: String) -> Option<Directory> {
-    let path = PathBuf::from(path);
-    if let Ok(path_buf) = fs::read_link(path) {
-        return Some(Directory {
-            file_type: FileType::from(&path_buf),
-            name: path_buf.file_name().unwrap().to_string_lossy().to_string(),
-            path: path_buf.to_string_lossy().to_string().to_owned(),
-            error: None,
-        });
-    }
-    None
-}
+mod domain;
+mod handlers;
+mod services;
 
 #[tokio::main]
 async fn main() {
@@ -58,7 +34,7 @@ enum FileType {
 }
 
 #[derive(Debug, Serialize)]
-struct Directory {
+pub struct Directory {
     file_type: FileType,
     name: String,
     path: String,
@@ -114,45 +90,3 @@ impl From<&PathBuf> for FileType {
     }
 }
 
-fn readdir_rec(path: &str, all_files: &mut Vec<Directory>) -> std::io::Result<()> {
-    let dir: ReadDir = fs::read_dir(path)?;
-    dir.flatten().try_for_each(|d| {
-        let is_dir: bool = d.file_type()?.is_dir();
-        if is_dir {
-            match readdir_rec(&d.path().to_string_lossy().to_string(), all_files) {
-                Ok(_) => (),
-                Err(err) => match err.kind() {
-                    ErrorKind::PermissionDenied => all_files.push(Directory {
-                        file_type: FileType::Directory,
-                        name: d.path().file_name().unwrap().to_string_lossy().to_string(),
-                        path: d.path().to_string_lossy().to_string(),
-                        error: Some(err.to_string()),
-                    }),
-                    _ => return Err(err),
-                },
-            }
-        } else {
-            all_files.push(Directory {
-                file_type: FileType::from(&d.path()),
-                name: d.path().file_name().unwrap().to_string_lossy().to_string(),
-                path: d.path().to_string_lossy().to_string(),
-                error: None,
-            });
-            if &d.path().file_name().unwrap().to_string_lossy() == ".zshrc" {}
-        }
-        Ok(())
-    })
-}
-
-fn readdir(path: &str, all_entries: &mut Vec<Directory>) -> std::io::Result<()> {
-    let dir = fs::read_dir(path)?;
-    for d in dir {
-        match d {
-            Ok(dir) => {
-                all_entries.push(Directory::from(&dir.path()));
-            }
-            Err(_) => (),
-        }
-    }
-    Ok(())
-}
