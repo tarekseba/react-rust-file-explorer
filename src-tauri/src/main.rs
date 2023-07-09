@@ -1,16 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{
-    ffi::OsStr,
-    fs::{self, ReadDir},
-    io::ErrorKind,
-    path::PathBuf,
-};
+use std::{ffi::OsStr, fs, path::PathBuf};
 
 use serde::Serialize;
 
-use crate::handlers::explorer_handlers::{readlink_handler, readdir_handler};
+use crate::handlers::explorer_handlers::{readdir_handler, readdir_rec_handler, readlink_handler};
 
 mod domain;
 mod handlers;
@@ -19,7 +14,11 @@ mod services;
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![readdir_handler, readlink_handler])
+        .invoke_handler(tauri::generate_handler![
+            readdir_handler,
+            readlink_handler,
+            readdir_rec_handler
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -55,21 +54,21 @@ impl From<&PathBuf> for Directory {
             path,
             error: None,
         };
-        println!("{:?}", dir);
+        // println!("{:?}", dir);
         dir
     }
 }
 
 impl From<&PathBuf> for FileType {
     fn from(value: &PathBuf) -> Self {
-        println!(
-            "file: {:?} | is symlink : {} | is file : {}, is dir : {}",
-            value.file_name(),
-            value.is_symlink(),
-            value.is_file(),
-            value.is_dir()
-        );
-        println!("{:?}", fs::metadata(value));
+        // println!(
+        //     "file: {:?} | is symlink : {} | is file : {}, is dir : {}",
+        //     value.file_name(),
+        //     value.is_symlink(),
+        //     value.is_file(),
+        //     value.is_dir()
+        // );
+        // println!("{:?}", fs::metadata(value));
         if value.is_symlink() {
             let file_name = value.file_name();
             if let Some(f_name) = file_name {
@@ -89,4 +88,3 @@ impl From<&PathBuf> for FileType {
         }
     }
 }
-
