@@ -3,12 +3,13 @@ import type { DirEntry, FileTypeEntity, ReactState } from "../domain"
 import { HistoryBuffer } from "../domain/history_buffer"
 import { open } from "@tauri-apps/api/shell"
 import { invoke } from "@tauri-apps/api"
+import type { Payload } from "../domain/dtos"
 
 type OpenActions = { [k in FileTypeEntity]: (path: DirEntry) => Promise<void> }
 
 export interface AppState {
-  directory?: DirEntry[]
-  setDirectory: Dispatch<SetStateAction<DirEntry[]>>
+  directory?: Payload<DirEntry[]>
+  setDirectory: Dispatch<SetStateAction<Payload<DirEntry[]>>>
   history: HistoryBuffer
   changeDir: (path: string) => void
   reloadDir: () => void
@@ -21,17 +22,17 @@ export interface AppState {
 const AppContext: Context<AppState> = createContext<AppState>({} as AppState)
 
 export const AppStateProvider = (props: PropsWithChildren<unknown>) => {
-  const [directory, setDirectory]: ReactState<DirEntry[]> = useState([] as DirEntry[])
+  const [directory, setDirectory]: ReactState<Payload<DirEntry[]>> = useState<Payload<DirEntry[]>>({ data: undefined, error: undefined })
   const [history, setHistory]: ReactState<HistoryBuffer> = useState(new HistoryBuffer(["/"], 0, 0, 50))
 
   const changeDir = async (path: string) => {
     setHistory(history.push(path))
-    const dir: DirEntry[] = await invoke("readdir_handler", { path })
+    const dir: Payload<DirEntry[]> = await invoke("readdir_handler", { path })
     setDirectory(dir)
   }
 
   const reloadDir = async () => {
-    const dir: DirEntry[] = await invoke("readdir_handler", { path: history.peek() })
+    const dir: Payload<DirEntry[]> = await invoke("readdir_handler", { path: history.peek() })
     setDirectory(dir)
   }
 
@@ -57,9 +58,9 @@ export const AppStateProvider = (props: PropsWithChildren<unknown>) => {
     },
     Symlink: async (entry: DirEntry) => {
       try {
-        const file: DirEntry = await invoke("readlink_handler", { path: entry.path })
-        if (file) {
-          await changeDir(file.path)
+        const payload: Payload<DirEntry> = await invoke("readlink_handler", { path: entry.path })
+        if (payload?.data) {
+          await changeDir(payload.data.path)
         }
       } catch (e) {
         console.error(e)
