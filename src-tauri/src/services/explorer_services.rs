@@ -4,7 +4,7 @@ use std::{
     io::ErrorKind,
     path::PathBuf,
 };
-use sublime_fuzzy::FuzzySearch;
+use sublime_fuzzy::{FuzzySearch, Match};
 
 pub fn readdir(path: &str) -> std::io::Result<Vec<Directory>> {
     let dir = fs::read_dir(path)?;
@@ -48,19 +48,19 @@ fn readdir_rec_aux(
     let dir: ReadDir = fs::read_dir(start_path)?;
     dir.flatten().try_for_each(|d| {
         let is_dir: bool = d.file_type()?.is_dir();
-        let score = FuzzySearch::new(query, &d.file_name().to_string_lossy().to_string())
+        FuzzySearch::new(query, &d.file_name().to_string_lossy().to_string())
             .case_insensitive()
-            .best_match();
-        if let Some(score) = score {
-            if score.score() > 80 {
-                all_entries.push(Directory {
-                    file_type: FileType::from(&d.path()),
-                    name: d.path().file_name().unwrap().to_string_lossy().to_string(),
-                    path: d.path().to_string_lossy().to_string(),
-                    error: None,
-                })
-            }
-        }
+            .best_match()
+            .map(|match_score: Match| {
+                if match_score.score() > 80 {
+                    all_entries.push(Directory {
+                        file_type: FileType::from(&d.path()),
+                        name: d.path().file_name().unwrap().to_string_lossy().to_string(),
+                        path: d.path().to_string_lossy().to_string(),
+                        error: None,
+                    })
+                }
+            });
         if is_dir {
             match readdir_rec_aux(query, &d.path().to_string_lossy().to_string(), all_entries) {
                 Err(err) => match err.kind() {
