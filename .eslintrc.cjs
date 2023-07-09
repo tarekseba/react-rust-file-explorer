@@ -31,10 +31,12 @@ module.exports = {
     "rules": {
       "no-console": 1,
       "quotes": "off",
+      "no-trailing-spaces": "warn",
       "@typescript-eslint/quotes": [1, "double"],
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/strict-boolean-expressions": "off",
       "@typescript-eslint/no-misused-promises": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
       "react/jsx-uses-react": "off"
 
     }
